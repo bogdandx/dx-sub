@@ -64,3 +64,29 @@ Exit codes:
 ```powershell
 .\.venv\Scripts\python.exe -m pytest --cov=. --cov-report=term-missing
 ```
+
+## Build a Windows Executable
+
+Install packaging support in the virtual environment:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install pyinstaller
+```
+
+Build the executable:
+
+```powershell
+.\build.ps1
+```
+
+The generated executable will be written to:
+
+```text
+dist\dx-sub.exe
+```
+
+You can then run it without calling Python directly:
+
+```powershell
+.\dist\dx-sub.exe .\path\to\input-folder .\path\to\output-folder
+```
