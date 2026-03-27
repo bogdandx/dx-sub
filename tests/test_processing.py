@@ -96,3 +96,34 @@ def test_convert_directory_creates_output_directory_and_returns_results(tmp_path
     assert results == [type(results[0])(file_name="sample.srt", error=None)]
     assert output_dir.exists()
     assert (output_dir / "sample.srt").read_bytes() == b"\xef\xbb\xbfSalut"
+
+
+def test_convert_directory_continues_processing_after_one_file_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    input_dir = tmp_path / "input"
+    output_dir = tmp_path / "output"
+    input_dir.mkdir()
+    failing_file = input_dir / "a.srt"
+    succeeding_file = input_dir / "b.srt"
+    failing_file.write_bytes(b"broken")
+    succeeding_file.write_bytes(b"Salut")
+
+    original_convert_file = processing.convert_file
+
+    def fake_convert_file(source_path: Path, destination_dir: Path) -> processing.FileResult:
+        if source_path.name == "a.srt":
+            return processing.FileResult(file_name=source_path.name, error="boom")
+        return original_convert_file(source_path, destination_dir)
+
+    monkeypatch.setattr(processing, "convert_file", fake_convert_file)
+
+    srt_files, results = convert_directory(input_dir, output_dir)
+
+    assert srt_files == [failing_file, succeeding_file]
+    assert results == [
+        processing.FileResult(file_name="a.srt", error="boom"),
+        processing.FileResult(file_name="b.srt", error=None),
+    ]
+    assert not (output_dir / "a.srt").exists()
+    assert (output_dir / "b.srt").read_bytes() == b"\xef\xbb\xbfSalut"
